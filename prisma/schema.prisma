@@ -1,0 +1,18 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model DailyMetric {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  support   Int
+  undecided Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
