@@ -1,14 +1,14 @@
 "use client";
 
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, LabelList } from "recharts";
-
-const data = [
-  { name: "Committed", value: 54 },
-  { name: "Undecided", value: 28 },
-  { name: "Opposition", value: 18 },
-];
-
-const COLORS = ["#16a34a", "#f97316", "#dc2626"];
+import React from "react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 export default function VoterIntentionPie(props: {
   committed: number;
@@ -16,6 +16,38 @@ export default function VoterIntentionPie(props: {
   opposition: number;
 }) {
   const { committed, undecided, opposition } = props;
-  // use these values instead of hardcoded 54/28/18
-}
 
+  const data = [
+    { name: "Committed", value: committed },
+    { name: "Undecided", value: undecided },
+    { name: "Opposition", value: opposition },
+  ];
+
+  const colors = ["#16a34a", "#f59e0b", "#ef4444"]; // green, orange, red
+
+  return (
+    <div className="h-full w-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={95}
+            paddingAngle={2}
+            isAnimationActive={false}
+          >
+            {data.map((_, i) => (
+              <Cell key={i} fill={colors[i]} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(v: any) => [`${v}%`, ""]} />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
