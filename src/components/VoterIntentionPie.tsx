@@ -1,22 +1,17 @@
-"use client";
+﻿"use client";
 
 import React from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
-export default function VoterIntentionPie(props: {
+export default function VoterIntentionPie({
+  committed,
+  undecided,
+  opposition,
+}: {
   committed: number;
   undecided: number;
   opposition: number;
 }) {
-  const { committed, undecided, opposition } = props;
-
   const data = [
     { name: "Committed", value: committed },
     { name: "Undecided", value: undecided },
