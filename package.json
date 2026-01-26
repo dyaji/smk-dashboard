@@ -1,18 +1,18 @@
 {
-   "name": "smk-dashboard",
+  "name": "smk-dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start",
-  "lint": "next lint",
-  "seed:daily": "tsx src/scripts/seedDailyMetrics.ts"
-  "postinstall": "prisma generate"
-},
- "engines": {
-  "node": "20.19.1"
-}
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed:daily": "tsx src/scripts/seedDailyMetrics.ts",
+    "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": "20.19.1"
+  },
   "dependencies": {
     "@prisma/client": "^6.19.2",
     "next": "16.1.4",
@@ -33,4 +33,3 @@
     "typescript": "^5"
   }
 }
-
