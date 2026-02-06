@@ -96,12 +96,7 @@ export default function Page() {
     }),
     []
   );
-<section className="lg:col-span-12 rounded-2xl border bg-white shadow-sm">
-  <div className="p-5">
-    <WardSentimentPanel />
-  </div>
-</section>
-
+  
   const lgaLeaderboard = useMemo(
     () => [
       { lga: "Zangon Kataf", score: 92 },
@@ -294,7 +289,15 @@ export default function Page() {
               </div>
             </div>
           </section>
-
+          {/* Ward Sentiment */}
+          <section className="lg:col-span-4 rounded-2xl border bg-white shadow-sm">
+            <div className="border-b px-5 py-4">
+              <h2 className="text-lg font-bold">Ward Sentiment</h2>
+            </div>
+            <div className="p-5">
+              <WardSentimentPanel />
+            </div>
+          </section>    
           {/* LGA Leaderboard */}
           <section className="lg:col-span-12 rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
