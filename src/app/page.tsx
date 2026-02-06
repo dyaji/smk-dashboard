@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import SupportTrendChart from "@/components/SupportTrendChart";
 import VoterIntentionPie from "@/components/VoterIntentionPie";
 import TopIssuesBar from "@/components/TopIssuesBar";
+import WardSentimentPanel from "@/components/WardSentimentPanel";
+
 
 type LiveKpis = {
   votesCommitted: number;
@@ -94,6 +96,11 @@ export default function Page() {
     }),
     []
   );
+<section className="lg:col-span-12 rounded-2xl border bg-white shadow-sm">
+  <div className="p-5">
+    <WardSentimentPanel />
+  </div>
+</section>
 
   const lgaLeaderboard = useMemo(
     () => [
