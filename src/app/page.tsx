@@ -1,5 +1,7 @@
 "use client";
 
+import GroupPerformanceScorecard from "@/components/GroupPerformanceScorecard";
+import ForecastPanel from "@/components/ForecastPanel";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import SupportTrendChart from "@/components/SupportTrendChart";
@@ -294,7 +296,26 @@ export default function Page() {
               </div>
             </div>
           </section>
+               {/* Group Performance Scorecard */}
+                <section className="lg:col-span-8 rounded-2xl border bg-white shadow-sm">
+                 <div className="border-b px-5 py-4">
+                    <h2 className="text-lg font-bold">Group Performance Scorecard</h2>
+                  </div>
+                  <div className="p-5">
+                      <GroupPerformanceScorecard />
+                  </div>
+                </section>
 
+            {/* Forecast */}
+            <section className="lg:col-span-4 rounded-2xl border bg-white shadow-sm">
+               <div className="border-b px-5 py-4">
+                   <h2 className="text-lg font-bold">Forecast &amp; Confidence</h2>
+                </div>
+                 <div className="p-5">
+                   <ForecastPanel />
+               </div>
+            </section>
+   
           {/* Ward Sentiment (FULL WIDTH like LGA leaderboard) */}
           <section className="lg:col-span-12 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
