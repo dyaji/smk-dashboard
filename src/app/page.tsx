@@ -7,7 +7,6 @@ import VoterIntentionPie from "@/components/VoterIntentionPie";
 import TopIssuesBar from "@/components/TopIssuesBar";
 import WardSentimentPanel from "@/components/WardSentimentPanel";
 
-
 type LiveKpis = {
   votesCommitted: number;
   votesTarget: number;
@@ -32,7 +31,6 @@ function formatNGN(n: number) {
 }
 
 export default function Page() {
-  // Fallback values (used while API loads or if API fails)
   const fallback: LiveKpis = useMemo(
     () => ({
       votesCommitted: 482_500,
@@ -75,14 +73,14 @@ export default function Page() {
     };
   }, []);
 
+  // Always render from this single source of truth
   const k = liveKpis ?? fallback;
 
-  // Example local data (you can later move these to Sheets too if you want)
   const outreach = useMemo(
     () => ({
       doorsKnocked: 86_450,
       callsMade: 124_800,
-      townHalls: 42, // extra metric to fill the empty space
+      townHalls: 42,
     }),
     []
   );
@@ -96,7 +94,7 @@ export default function Page() {
     }),
     []
   );
-  
+
   const lgaLeaderboard = useMemo(
     () => [
       { lga: "Zangon Kataf", score: 92 },
@@ -137,6 +135,7 @@ export default function Page() {
                   <p className="mt-1 text-xs font-semibold tracking-[0.35em] text-white/70 md:text-sm">
                     TRUST THE PROCESS CAMPAIGN DASHBOARD
                   </p>
+
                   {kpisError ? (
                     <p className="mt-2 text-xs text-orange-200">
                       KPIs not live yet: {kpisError}
@@ -164,8 +163,12 @@ export default function Page() {
               {/* KPI Cards */}
               <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-2xl border border-white/10 bg-white/10 p-4 text-white shadow-sm">
-                  <div className="text-xs font-semibold text-white/80">Total Votes Committed</div>
-                  <div className="mt-2 text-3xl font-extrabold">{formatNumber(k.votesCommitted)}</div>
+                  <div className="text-xs font-semibold text-white/80">
+                    Total Votes Committed
+                  </div>
+                  <div className="mt-2 text-3xl font-extrabold">
+                    {formatNumber(k.votesCommitted)}
+                  </div>
                   <div className="mt-2 text-xs text-white/70">
                     Target: {formatNumber(k.votesTarget)}
                   </div>
@@ -198,29 +201,29 @@ export default function Page() {
         </section>
 
         {/* Body grid */}
-        <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <section className="mt-6 grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-12">
           {/* Voter Intention */}
-          <section className="lg:col-span-7 rounded-2xl border bg-white shadow-sm">
+          <section className="lg:col-span-7 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
               <h2 className="text-lg font-bold">Voter Intention</h2>
             </div>
-            <div className="p-5">
+            <div className="p-5 min-w-0">
               <div className="h-80 w-full min-w-0">
                 <VoterIntentionPie
-                  committed={liveKpis?.committedPct ?? 54}
-                  undecided={liveKpis?.undecidedPct ?? 28}
-                  opposition={liveKpis?.oppositionPct ?? 18}
+                  committed={k.committedPct}
+                  undecided={k.undecidedPct}
+                  opposition={k.oppositionPct}
                 />
               </div>
             </div>
           </section>
 
           {/* Polls & Sentiment */}
-          <section className="lg:col-span-5 rounded-2xl border bg-white shadow-sm">
+          <section className="lg:col-span-5 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
               <h2 className="text-lg font-bold">Polls &amp; Sentiment</h2>
             </div>
-            <div className="p-5">
+            <div className="p-5 min-w-0">
               <SupportTrendChart />
               <div className="mt-4 flex items-center justify-center gap-6 text-sm">
                 <div className="font-semibold text-emerald-700">
@@ -234,11 +237,11 @@ export default function Page() {
           </section>
 
           {/* Campaign Outreach */}
-          <section className="lg:col-span-4 rounded-2xl border bg-white shadow-sm">
+          <section className="lg:col-span-4 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
               <h2 className="text-lg font-bold">Campaign Outreach</h2>
             </div>
-            <div className="p-5 grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-3">
               <div className="rounded-xl bg-[#0f3b34] px-4 py-3 text-white">
                 <div className="text-[11px] text-white/80">Doors Knocked</div>
                 <div className="mt-1 text-xl font-extrabold">{formatNumber(outreach.doorsKnocked)}</div>
@@ -255,28 +258,30 @@ export default function Page() {
           </section>
 
           {/* Top Issues */}
-          <section className="lg:col-span-4 rounded-2xl border bg-white shadow-sm">
+          <section className="lg:col-span-4 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
               <h2 className="text-lg font-bold">Top Issues</h2>
             </div>
-            <div className="p-5">
+            <div className="p-5 min-w-0">
               <TopIssuesBar />
             </div>
           </section>
 
           {/* Social Media Stats */}
-          <section className="lg:col-span-4 rounded-2xl border bg-white shadow-sm">
+          <section className="lg:col-span-4 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
               <h2 className="text-lg font-bold">Social Media Stats</h2>
             </div>
-            <div className="p-5 grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 p-5">
               <div className="rounded-xl bg-slate-800 px-4 py-3 text-white">
                 <div className="text-[11px] text-white/70">Followers</div>
                 <div className="mt-1 text-xl font-extrabold">{formatNumber(social.followers)}</div>
               </div>
               <div className="rounded-xl bg-slate-800 px-4 py-3 text-white">
                 <div className="text-[11px] text-white/70">Engagements</div>
-                <div className="mt-1 text-xl font-extrabold">{formatNumber(social.engagementsThisWeek)}</div>
+                <div className="mt-1 text-xl font-extrabold">
+                  {formatNumber(social.engagementsThisWeek)}
+                </div>
                 <div className="text-[11px] text-white/60">This week</div>
               </div>
               <div className="rounded-xl bg-slate-800 px-4 py-3 text-white">
@@ -289,21 +294,23 @@ export default function Page() {
               </div>
             </div>
           </section>
-          {/* Ward Sentiment */}
-          <section className="lg:col-span-4 rounded-2xl border bg-white shadow-sm">
+
+          {/* Ward Sentiment (FULL WIDTH like LGA leaderboard) */}
+          <section className="lg:col-span-12 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
               <h2 className="text-lg font-bold">Ward Sentiment</h2>
             </div>
-            <div className="p-5">
+            <div className="p-5 min-w-0">
               <WardSentimentPanel />
             </div>
-          </section>    
+          </section>
+
           {/* LGA Leaderboard */}
-          <section className="lg:col-span-12 rounded-2xl border bg-white shadow-sm">
+          <section className="lg:col-span-12 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div className="border-b px-5 py-4">
               <h2 className="text-lg font-bold">LGA Leaderboard</h2>
             </div>
-            <div className="p-5 overflow-x-auto">
+            <div className="overflow-x-auto p-5">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="text-left text-slate-600">
                   <tr>

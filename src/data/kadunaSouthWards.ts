@@ -1,27 +1,4 @@
-// src/data/kadunaSouthWards.ts
-
-export type KadunaSouthLGA =
-  | "Jaba"
-  | "Kaura"
-  | "Kagarko"
-  | "Jema'a"
-  | "Kachia"
-  | "Kauru"
-  | "Sanga"
-  | "Zangon Kataf";
-
-export const KADUNA_SOUTH_LGAS: KadunaSouthLGA[] = [
-  "Jaba",
-  "Kaura",
-  "Kagarko",
-  "Jema'a",
-  "Kachia",
-  "Kauru",
-  "Sanga",
-  "Zangon Kataf",
-];
-
-export const WARDS_BY_LGA: Record<KadunaSouthLGA, string[]> = {
+export const kadunaSouthWardsByLga = {
   Jaba: [
     "Nduyah",
     "Sambam",
@@ -34,17 +11,33 @@ export const WARDS_BY_LGA: Record<KadunaSouthLGA, string[]> = {
     "Nok",
     "Fai",
   ],
-  Kaura: [
-    "Fada",
-    "Kukum",
-    "Kpak",
-    "Agban",
-    "Kadarko",
-    "Mallagum",
-    "Manchok",
-    "Bondong",
-    "Kaura",
-    "Zankan",
+  "Jema'a": [
+    "Kafanchan 'A'",
+    "Kafanchan 'B'",
+    "Maigizo 'A'",
+    "Kaninkon",
+    "Jagindi",
+    "Godogodo",
+    "Gidan Waya",
+    "Atuku",
+    "Asso",
+    "Bedde",
+    "Kagoma",
+    "Takau 'B'",
+  ],
+  Kachia: [
+    "Agunu",
+    "Awon",
+    "Doka",
+    "Gumel",
+    "Gidan Tagwai",
+    "Kwaturu",
+    "Ankwa",
+    "Katari",
+    "Bishini",
+    "Kachia Urban",
+    "Sabon Sarki",
+    "Kurmin Musa",
   ],
   Kagarko: [
     "Kagarko North",
@@ -58,90 +51,81 @@ export const WARDS_BY_LGA: Record<KadunaSouthLGA, string[]> = {
     "Katugal",
     "Kukui",
   ],
-  "Jema'a": [
-    "Asso",
-    "Atuku",
-    "Barde",
-    "Gidan Waya",
-    "Godogodo",
-    "Jagindi",
-    "Kafanchan A",
-    "Kafanchan B",
-    "Kagoma (Gwong)",
-    "Kaninkon (Nikyob)",
-    "Maigizo (Kadajya)",
-    "Takau",
-  ],
-  Kachia: [
-    "Agunu",
-    "Awon",
-    "Doka",
-    "Gumel",
-    "Gidan Tagwai",
-    "Kwatiru",
-    "Ankwa",
-    "Katari",
-    "Bishini",
-    "Kachia Urban",
-    "Sabon Sarki",
-    "Kurmin Musa",
+  Kaura: [
+    "Fada",
+    "Kukum",
+    "Kpak",
+    "Agban",
+    "Kadarko",
+    "Mallagum",
+    "Manchok",
+    "Bondon",
+    "Kaura",
+    "Zankan",
   ],
   Kauru: [
-    "Badurum",
-    "Bital",
-    "Damakasuwa",
-    "Dawaki",
-    "Geshere",
-    "Kamaru",
-    "Kauru East",
     "Kauru West",
-    "Kwassam",
     "Makami",
+    "Dawaki",
+    "Kwassam",
+    "Bital",
+    "Geshere",
+    "Damakasuwa",
+    "Badurum Sama",
+    "Kamaru",
     "Pari",
+    "Kauru East",
   ],
   Sanga: [
-    "Aboro",
-    "Arak",
-    "Ayu",
-    "Bokana",
-    "Fadan Karshi",
     "Gwantu",
-    "Nandu",
+    "Fadan Karshi",
+    "Ayu",
     "Ninzam North",
     "Ninzam South",
+    "Bokana",
+    "Aboro",
     "Ninzam West",
     "Wasa Station",
+    "Arak",
+    "Nandu",
   ],
   "Zangon Kataf": [
-    "Atak Nfang (Zaman Dabo)",
-    "Gidan Jatau",
-    "Ikulu",
-    "Jei",
-    "Kamantan",
-    "Kanai",
+    "Gora",
+    "Zonzon",
+    "Zaman Dabo",
+    "Unguwar Gaiya",
+    "Zonkwa",
     "Madakiya",
     "Unguwar Rimi",
+    "Gidan Jatau",
+    "Kamantan",
+    "Kamuru Ikulu North",
     "Zango Urban",
-    "Zonkwa",
-    "Zonzon",
   ],
-};
+} as const;
 
-export function makeWardId(lga: string, ward: string) {
-  const raw = `${lga}-${ward}`.toLowerCase();
-  return raw.replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-}
+export type KadunaSouthLga = keyof typeof kadunaSouthWardsByLga;
 
-export type WardRecord = {
-  id: string;
-  lga: KadunaSouthLGA;
+export type WardRow = {
+  lga: KadunaSouthLga;
   ward: string;
 };
 
-export const ALL_WARDS: WardRecord[] = KADUNA_SOUTH_LGAS.flatMap((lga) =>
-  WARDS_BY_LGA[lga].map((ward) => ({
-    id: makeWardId(lga, ward),
-    lga,
-    ward,
-  }))
+export const kadunaSouthWards: WardRow[] = Object.entries(kadunaSouthWardsByLga).flatMap(
+  ([lga, wards]) => wards.map((ward) => ({ lga: lga as KadunaSouthLga, ward }))
 );
+
+export function makeWardId(lga: string, ward: string) {
+  return `${lga}::${ward}`;
+}
+
+export const lgaLabels: Record<KadunaSouthLga, string> = {
+  Jaba: "Jaba",
+  "Jema'a": "Jema’a",
+  Kachia: "Kachia",
+  Kagarko: "Kagarko",
+  Kaura: "Kaura",
+  Kauru: "Kauru",
+  Sanga: "Sanga",
+  "Zangon Kataf": "Zangon Kataf",
+};

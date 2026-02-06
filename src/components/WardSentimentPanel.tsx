@@ -1,226 +1,251 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { kadunaSouthWards } from "@/data/kadunaSouthWards";
+import { useEffect, useMemo, useState } from "react";
+import {
+  kadunaSouthWardsByLga,
+  KadunaSouthLga,
+  lgaLabels,
+  makeWardId,
+} from "@/data/kadunaSouthWards";
 
-type WardRow = { lga: string; ward: string };
+type Sentiment = {
+  positivePct: number;
+  neutralPct: number;
+  negativePct: number;
+  netScore: number; // positive - negative
+  trend7d: "Up" | "Down" | "Flat";
+  keywords: string[];
+};
 
-function hashInt(input: string) {
+function hash01(input: string) {
   let h = 0;
   for (let i = 0; i < input.length; i++) h = (h * 31 + input.charCodeAt(i)) >>> 0;
-  return h;
+  return (h % 100000) / 100000;
 }
 
-function demoMetrics(id: string) {
-  const h = hashInt(id);
-  // stable, realistic-ish ranges
-  const positive = 45 + (h % 26); // 45..70
-  const negative = 12 + ((h >>> 5) % 19); // 12..30
-  let neutral = 100 - positive - negative;
-  if (neutral < 5) neutral = 5;
-  const net = positive - negative; // -100..100 (here usually positive)
-  const volume = 30 + ((h >>> 10) % 111); // 30..140
-  return { positive, neutral, negative, net, volume };
+function buildDemoSentiment(lga: string, ward: string): Sentiment {
+  const seed = hash01(`${lga}::${ward}`);
+  const seed2 = hash01(`${ward}::${lga}::x`);
+  const seed3 = hash01(`${lga}::${ward}::k`);
+
+  // Keep these realistic and always sum to 100
+  const negative = Math.round(8 + seed * 17); // 8..25
+  const neutral = Math.round(15 + seed2 * 20); // 15..35
+  let positive = 100 - negative - neutral;
+
+  // guard rounding edge cases
+  if (positive < 0) positive = 0;
+  const net = positive - negative;
+
+  const trend: Sentiment["trend7d"] =
+    seed < 0.33 ? "Up" : seed < 0.66 ? "Flat" : "Down";
+
+  const pool = [
+    "Economy",
+    "Security",
+    "Jobs",
+    "Roads",
+    "Healthcare",
+    "Education",
+    "Farming",
+    "Electricity",
+    "Water",
+    "Cost of living",
+    "Youth outreach",
+    "Women inclusion",
+  ];
+
+  const start = Math.floor(seed3 * pool.length);
+  const keywords = Array.from({ length: 5 }).map((_, i) => pool[(start + i) % pool.length]);
+
+  return { positivePct: positive, neutralPct: neutral, negativePct: negative, netScore: net, trend7d: trend, keywords };
 }
 
 export default function WardSentimentPanel() {
-  const wards = useMemo(() => kadunaSouthWards as WardRow[], []);
+  const lgas = useMemo(() => Object.keys(kadunaSouthWardsByLga) as KadunaSouthLga[], []);
 
-  const lgas = useMemo(() => {
-    const set = new Set<string>();
-    wards.forEach((w) => set.add(w.lga));
-    return ["All LGAs", ...Array.from(set).sort()];
-  }, [wards]);
+  const [selectedLga, setSelectedLga] = useState<KadunaSouthLga>(lgas[0]);
+  const wards = useMemo(() => kadunaSouthWardsByLga[selectedLga] ?? [], [selectedLga]);
 
-  const [selectedLga, setSelectedLga] = useState<string>("All LGAs");
-  const [query, setQuery] = useState<string>("");
+  const [selectedWard, setSelectedWard] = useState<string>(wards[0] ?? "");
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return wards.filter((w) => {
-      const lgaOk = selectedLga === "All LGAs" ? true : w.lga === selectedLga;
-      const qOk = !q ? true : (w.ward + " " + w.lga).toLowerCase().includes(q);
-      return lgaOk && qOk;
-    });
-  }, [wards, selectedLga, query]);
+  // When LGA changes, force ward to first ward in that LGA
+  useEffect(() => {
+    setSelectedWard(wards[0] ?? "");
+  }, [selectedLga]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [selectedId, setSelectedId] = useState<string>(() => {
-    const first = wards[0];
-    return first ? `${first.lga}::${first.ward}` : "";
-  });
+  const sentiment = useMemo(() => {
+    if (!selectedWard) return null;
+    return buildDemoSentiment(selectedLga, selectedWard);
+  }, [selectedLga, selectedWard]);
 
-  const selected = useMemo(() => {
-    const [lga, ward] = selectedId.split("::");
-    return { lga: lga || "", ward: ward || "" };
-  }, [selectedId]);
-
-  // If the current selection is filtered out, fall back to first visible.
-  useMemo(() => {
-    if (!filtered.length) return;
-    const exists = filtered.some((w) => `${w.lga}::${w.ward}` === selectedId);
-    if (!exists) setSelectedId(`${filtered[0].lga}::${filtered[0].ward}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered]);
-
-  const m = useMemo(() => demoMetrics(selectedId || "seed"), [selectedId]);
+  const wardId = selectedWard ? makeWardId(selectedLga, selectedWard) : "";
 
   return (
-    <div className="w-full">
-      {/* Top controls (wrap safely) */}
-      <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="flex items-center gap-3">
-          <div className="text-lg font-bold">Ward Sentiment</div>
-          <div className="text-sm text-slate-500">
-            (Kaduna South • {wards.length} Wards)
+    <div className="w-full min-w-0">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        {/* Controls */}
+        <div className="md:col-span-4 min-w-0">
+          <div className="rounded-xl border bg-slate-50 p-4">
+            <div className="text-xs font-semibold text-slate-600">Select Local Government</div>
+            <select
+              className="mt-2 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none"
+              value={selectedLga}
+              onChange={(e) => setSelectedLga(e.target.value as KadunaSouthLga)}
+            >
+              {lgas.map((lga) => (
+                <option key={lga} value={lga}>
+                  {lgaLabels[lga] ?? lga}
+                </option>
+              ))}
+            </select>
+
+            <div className="mt-4 text-xs font-semibold text-slate-600">Select Ward</div>
+            <select
+              className="mt-2 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none"
+              value={selectedWard}
+              onChange={(e) => setSelectedWard(e.target.value)}
+            >
+              {wards.map((w) => (
+                <option key={makeWardId(selectedLga, w)} value={w}>
+                  {w}
+                </option>
+              ))}
+            </select>
+
+            <div className="mt-4 text-xs text-slate-500">
+              Showing <span className="font-semibold">{wards.length}</span> wards in{" "}
+              <span className="font-semibold">{lgaLabels[selectedLga] ?? selectedLga}</span>
+            </div>
+          </div>
+
+          {/* Ward list (optional quick click) */}
+          <div className="mt-4 max-h-72 overflow-auto rounded-xl border bg-white p-2">
+            {wards.map((w) => {
+              const active = w === selectedWard;
+              return (
+                <button
+                  key={makeWardId(selectedLga, w)}
+                  onClick={() => setSelectedWard(w)}
+                  className={[
+                    "mb-1 w-full rounded-lg px-3 py-2 text-left text-sm",
+                    active ? "bg-[#0f3b34] text-white" : "hover:bg-slate-100",
+                  ].join(" ")}
+                >
+                  {w}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-3 sm:flex-row lg:ml-auto lg:w-auto">
-          <select
-            value={selectedLga}
-            onChange={(e) => setSelectedLga(e.target.value)}
-            className="w-full rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm sm:w-56"
-          >
-            {lgas.map((lga) => (
-              <option key={lga} value={lga}>
-                {lga}
-              </option>
-            ))}
-          </select>
+        {/* Sentiment display */}
+        <div className="md:col-span-8 min-w-0">
+          <div className="rounded-xl border bg-white p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-slate-600">Ward Sentiment Snapshot</div>
+                <div className="mt-1 text-lg font-extrabold text-slate-900 break-words">
+                  {lgaLabels[selectedLga] ?? selectedLga} — {selectedWard || "Select a ward"}
+                </div>
+                <div className="mt-1 text-xs text-slate-500 break-words">ID: {wardId}</div>
+              </div>
 
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search ward or LGA..."
-            className="w-full min-w-0 rounded-xl border bg-white px-4 py-3 text-sm text-slate-800 shadow-sm sm:w-[420px]"
-          />
-        </div>
-      </div>
-
-      {/* Main layout */}
-      <div className="mt-5 grid w-full grid-cols-1 gap-5 lg:grid-cols-12">
-        {/* Left list */}
-        <div className="lg:col-span-4">
-          <div className="rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-4 py-3 text-sm font-semibold text-slate-800">
-              Click a ward{" "}
-              <span className="font-normal text-slate-500">({filtered.length} results)</span>
+              {sentiment ? (
+                <div className="rounded-xl bg-slate-50 px-4 py-3">
+                  <div className="text-xs font-semibold text-slate-600">7-day Trend</div>
+                  <div
+                    className={[
+                      "mt-1 text-sm font-extrabold",
+                      sentiment.trend7d === "Up"
+                        ? "text-emerald-700"
+                        : sentiment.trend7d === "Down"
+                        ? "text-rose-700"
+                        : "text-slate-700",
+                    ].join(" ")}
+                  >
+                    {sentiment.trend7d}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
-            <div className="max-h-[520px] overflow-y-auto p-3">
-              <div className="space-y-2">
-                {filtered.map((w) => {
-                  const id = `${w.lga}::${w.ward}`;
-                  const active = id === selectedId;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setSelectedId(id)}
-                      className={[
-                        "w-full rounded-xl border px-3 py-3 text-left transition",
-                        active
-                          ? "border-transparent bg-[#0f3b34] text-white"
-                          : "border-slate-200 bg-white hover:bg-slate-50",
-                      ].join(" ")}
-                    >
-                      <div className={active ? "font-extrabold" : "font-semibold"}>
-                        <span className="block truncate">{w.ward}</span>
-                      </div>
-                      <div
-                        className={[
-                          "mt-1 text-xs",
-                          active ? "text-white/80" : "text-slate-500",
-                        ].join(" ")}
+            {sentiment ? (
+              <>
+                {/* Distribution bar */}
+                <div className="mt-4">
+                  <div className="mb-2 flex flex-wrap gap-4 text-xs">
+                    <div className="font-semibold text-emerald-700">
+                      {sentiment.positivePct}% <span className="font-normal text-slate-600">Positive</span>
+                    </div>
+                    <div className="font-semibold text-slate-700">
+                      {sentiment.neutralPct}% <span className="font-normal text-slate-600">Neutral</span>
+                    </div>
+                    <div className="font-semibold text-rose-700">
+                      {sentiment.negativePct}% <span className="font-normal text-slate-600">Negative</span>
+                    </div>
+                  </div>
+
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div className="flex h-3 w-full">
+                      <div className="h-3 bg-emerald-600" style={{ width: `${sentiment.positivePct}%` }} />
+                      <div className="h-3 bg-slate-500" style={{ width: `${sentiment.neutralPct}%` }} />
+                      <div className="h-3 bg-rose-600" style={{ width: `${sentiment.negativePct}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPIs */}
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl bg-slate-50 p-4">
+                    <div className="text-xs font-semibold text-slate-600">Net Sentiment</div>
+                    <div className="mt-1 text-2xl font-extrabold text-slate-900">
+                      {sentiment.netScore >= 0 ? `+${sentiment.netScore}` : sentiment.netScore}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">Positive − Negative</div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-4">
+                    <div className="text-xs font-semibold text-slate-600">Priority</div>
+                    <div className="mt-1 text-2xl font-extrabold text-slate-900">
+                      {sentiment.netScore >= 25 ? "Hold" : sentiment.netScore >= 10 ? "Build" : "Push"}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">Suggested focus level</div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-4">
+                    <div className="text-xs font-semibold text-slate-600">Signal Quality</div>
+                    <div className="mt-1 text-2xl font-extrabold text-slate-900">
+                      {sentiment.neutralPct <= 18 ? "High" : sentiment.neutralPct <= 28 ? "Medium" : "Low"}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">Lower neutral = clearer signal</div>
+                  </div>
+                </div>
+
+                {/* Keywords */}
+                <div className="mt-4">
+                  <div className="text-xs font-semibold text-slate-600">Top Drivers (demo)</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {sentiment.keywords.map((k) => (
+                      <span
+                        key={k}
+                        className="rounded-full bg-[#0f3b34]/10 px-3 py-1 text-xs font-semibold text-[#0f3b34]"
                       >
-                        {w.lga}
-                      </div>
-                    </button>
-                  );
-                })}
-
-                {!filtered.length ? (
-                  <div className="rounded-xl border border-dashed p-4 text-sm text-slate-500">
-                    No wards match your filter.
+                        {k}
+                      </span>
+                    ))}
                   </div>
-                ) : null}
+
+                  <div className="mt-3 text-xs text-slate-500">
+                    This is demo sentiment. When you’re ready, we’ll replace this generator with live values from Google Sheets.
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                Select an LGA and a ward to view sentiment.
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right details */}
-        <div className="min-w-0 lg:col-span-8">
-          <div className="rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-4 py-3">
-              <div className="text-xs text-slate-500">Selected ward</div>
-              <div className="mt-1 text-xl font-extrabold text-slate-900">
-                <span className="truncate">{selected.ward}</span>{" "}
-                <span className="text-slate-400">•</span>{" "}
-                <span className="font-semibold text-slate-700">{selected.lga}</span>
-              </div>
-            </div>
-
-            <div className="p-4">
-              {/* Metric tiles */}
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div className="rounded-xl border bg-white p-3">
-                  <div className="text-xs text-slate-500">Positive</div>
-                  <div className="mt-1 text-2xl font-extrabold text-emerald-700">
-                    {m.positive}%
-                  </div>
-                </div>
-
-                <div className="rounded-xl border bg-white p-3">
-                  <div className="text-xs text-slate-500">Neutral</div>
-                  <div className="mt-1 text-2xl font-extrabold text-slate-700">
-                    {m.neutral}%
-                  </div>
-                </div>
-
-                <div className="rounded-xl border bg-white p-3">
-                  <div className="text-xs text-slate-500">Negative</div>
-                  <div className="mt-1 text-2xl font-extrabold text-red-600">
-                    {m.negative}%
-                  </div>
-                </div>
-
-                <div className="rounded-xl border bg-white p-3">
-                  <div className="text-xs text-slate-500">Net score</div>
-                  <div className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {m.net >= 0 ? `+${m.net}` : m.net}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">Volume: {m.volume}</div>
-                </div>
-              </div>
-
-              {/* Sentiment bar */}
-              <div className="mt-5">
-                <div className="mb-2 text-sm font-semibold text-slate-800">Sentiment split</div>
-                <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
-                  <div className="flex h-full w-full">
-                    <div
-                      className="h-full bg-emerald-600"
-                      style={{ width: `${m.positive}%` }}
-                      title={`Positive ${m.positive}%`}
-                    />
-                    <div
-                      className="h-full bg-slate-500"
-                      style={{ width: `${m.neutral}%` }}
-                      title={`Neutral ${m.neutral}%`}
-                    />
-                    <div
-                      className="h-full bg-red-600"
-                      style={{ width: `${m.negative}%` }}
-                      title={`Negative ${m.negative}%`}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3 text-xs text-slate-500">
-                  Demo scoring (replace with Google Sheets later).
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
