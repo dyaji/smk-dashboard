@@ -7,7 +7,6 @@ import {
   lgaLabels,
   makeWardId,
 } from "@/data/kadunaSouthWards";
-import { buildDemoWardOps } from "@/lib/demoOps";
 
 type Sentiment = {
   positivePct: number;
@@ -17,6 +16,8 @@ type Sentiment = {
   trend7d: "Up" | "Down" | "Flat";
   keywords: string[];
 };
+
+type WardRow = { lga: string; ward: string };
 
 function hash01(input: string) {
   let h = 0;
@@ -29,7 +30,6 @@ function buildDemoSentiment(lga: string, ward: string): Sentiment {
   const seed2 = hash01(`${ward}::${lga}::x`);
   const seed3 = hash01(`${lga}::${ward}::k`);
 
-  // Always sum to 100
   const negative = Math.round(8 + seed * 17); // 8..25
   const neutral = Math.round(15 + seed2 * 20); // 15..35
   let positive = 100 - negative - neutral;
@@ -69,14 +69,26 @@ function buildDemoSentiment(lga: string, ward: string): Sentiment {
 }
 
 export default function WardSentimentPanel() {
-  const lgas = useMemo(() => Object.keys(kadunaSouthWardsByLga) as KadunaSouthLga[], []);
+  // Make sure LGAs is a stable typed list
+  const lgas = useMemo(
+    () => Object.keys(kadunaSouthWardsByLga) as KadunaSouthLga[],
+    []
+  );
 
-  const [selectedLga, setSelectedLga] = useState<KadunaSouthLga>(lgas[0]);
-  const wards = useMemo(() => kadunaSouthWardsByLga[selectedLga] ?? [], [selectedLga]);
+  const safeDefaultLga = (lgas[0] ?? (Object.keys(kadunaSouthWardsByLga)[0] as KadunaSouthLga)) as KadunaSouthLga;
 
-  const [selectedWard, setSelectedWard] = useState<string>(wards[0] ?? "");
+  const [selectedLga, setSelectedLga] = useState<KadunaSouthLga>(safeDefaultLga);
 
-  // Keep ward selection valid whenever LGA changes
+  // FORCE wards to be a plain string[] (prevents never[] + includes(prev) error)
+  const wards = useMemo<string[]>(
+    () => ((kadunaSouthWardsByLga[selectedLga] ?? []) as unknown as string[]),
+    [selectedLga]
+  );
+
+  // initialize ward from current LGA
+  const [selectedWard, setSelectedWard] = useState<string>(() => wards[0] ?? "");
+
+  // When LGA changes, keep ward if it exists in that LGA, otherwise set to first ward
   useEffect(() => {
     setSelectedWard((prev) => {
       if (!wards.length) return "";
@@ -90,11 +102,6 @@ export default function WardSentimentPanel() {
     return buildDemoSentiment(selectedLga, selectedWard);
   }, [selectedLga, selectedWard]);
 
-  const ops = useMemo(() => {
-    if (!selectedWard) return null;
-    return buildDemoWardOps(selectedLga, selectedWard);
-  }, [selectedLga, selectedWard]);
-
   const wardId = selectedWard ? makeWardId(selectedLga, selectedWard) : "";
 
   return (
@@ -103,7 +110,9 @@ export default function WardSentimentPanel() {
         {/* Controls */}
         <div className="md:col-span-4 min-w-0">
           <div className="rounded-xl border bg-slate-50 p-4">
-            <div className="text-xs font-semibold text-slate-600">Select Local Government</div>
+            <div className="text-xs font-semibold text-slate-600">
+              Select Local Government
+            </div>
             <select
               className="mt-2 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none"
               value={selectedLga}
@@ -116,11 +125,14 @@ export default function WardSentimentPanel() {
               ))}
             </select>
 
-            <div className="mt-4 text-xs font-semibold text-slate-600">Select Ward</div>
+            <div className="mt-4 text-xs font-semibold text-slate-600">
+              Select Ward
+            </div>
             <select
               className="mt-2 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none"
               value={selectedWard}
               onChange={(e) => setSelectedWard(e.target.value)}
+              disabled={!wards.length}
             >
               {wards.map((w) => (
                 <option key={makeWardId(selectedLga, w)} value={w}>
@@ -135,36 +147,47 @@ export default function WardSentimentPanel() {
             </div>
           </div>
 
-          {/* Ward list quick click */}
+          {/* Ward list (quick click) */}
           <div className="mt-4 max-h-72 overflow-auto rounded-xl border bg-white p-2">
-            {wards.map((w) => {
-              const active = w === selectedWard;
-              return (
-                <button
-                  key={makeWardId(selectedLga, w)}
-                  onClick={() => setSelectedWard(w)}
-                  className={[
-                    "mb-1 w-full rounded-lg px-3 py-2 text-left text-sm",
-                    active ? "bg-[#0f3b34] text-white" : "hover:bg-slate-100",
-                  ].join(" ")}
-                >
-                  {w}
-                </button>
-              );
-            })}
+            {wards.length ? (
+              wards.map((w) => {
+                const active = w === selectedWard;
+                return (
+                  <button
+                    key={makeWardId(selectedLga, w)}
+                    onClick={() => setSelectedWard(w)}
+                    className={[
+                      "mb-1 w-full rounded-lg px-3 py-2 text-left text-sm",
+                      active ? "bg-[#0f3b34] text-white" : "hover:bg-slate-100",
+                    ].join(" ")}
+                    type="button"
+                  >
+                    {w}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="p-3 text-sm text-slate-600">
+                No wards configured for this LGA yet.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Display */}
+        {/* Sentiment display */}
         <div className="md:col-span-8 min-w-0">
           <div className="rounded-xl border bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-xs font-semibold text-slate-600">Ward Sentiment Snapshot</div>
+                <div className="text-xs font-semibold text-slate-600">
+                  Ward Sentiment Snapshot
+                </div>
                 <div className="mt-1 text-lg font-extrabold text-slate-900 break-words">
                   {lgaLabels[selectedLga] ?? selectedLga} — {selectedWard || "Select a ward"}
                 </div>
-                <div className="mt-1 text-xs text-slate-500 break-words">ID: {wardId}</div>
+                <div className="mt-1 text-xs text-slate-500 break-words">
+                  ID: {wardId || "—"}
+                </div>
               </div>
 
               {sentiment ? (
@@ -214,7 +237,7 @@ export default function WardSentimentPanel() {
                   </div>
                 </div>
 
-                {/* Sentiment KPIs */}
+                {/* KPIs */}
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="rounded-xl bg-slate-50 p-4">
                     <div className="text-xs font-semibold text-slate-600">Net Sentiment</div>
@@ -254,78 +277,10 @@ export default function WardSentimentPanel() {
                       </span>
                     ))}
                   </div>
-                </div>
 
-                {/* Ward Ops Snapshot (Demo) */}
-                {ops ? (
-                  <div className="mt-5">
-                    <div className="text-xs font-semibold text-slate-600">Ward Ops Snapshot (Demo)</div>
-
-                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <div className="text-xs font-semibold text-slate-600">Coverage</div>
-                        <div className="mt-1 text-2xl font-extrabold">{ops.coveragePct}%</div>
-                        <div className="mt-1 text-xs text-slate-500">Ward/PU touch rate</div>
-                      </div>
-
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <div className="text-xs font-semibold text-slate-600">Verification</div>
-                        <div className="mt-1 text-2xl font-extrabold">{ops.verificationPct}%</div>
-                        <div className="mt-1 text-xs text-slate-500">Quality control</div>
-                      </div>
-
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <div className="text-xs font-semibold text-slate-600">Follow-up</div>
-                        <div className="mt-1 text-2xl font-extrabold">{ops.followupPct}%</div>
-                        <div className="mt-1 text-xs text-slate-500">2nd/3rd touches</div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <div className="text-xs font-semibold text-slate-600">Contacts</div>
-                        <div className="mt-1 text-lg font-extrabold">{ops.contactsWeek.toLocaleString()}</div>
-                        <div className="text-xs text-slate-500">This week</div>
-                        <div className="mt-2 text-lg font-extrabold">{ops.contactsMonth.toLocaleString()}</div>
-                        <div className="text-xs text-slate-500">This month</div>
-                      </div>
-
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <div className="text-xs font-semibold text-slate-600">Conversion</div>
-                        <div className="mt-1 text-lg font-extrabold">{ops.newCommittedWeek.toLocaleString()}</div>
-                        <div className="text-xs text-slate-500">New committed (week)</div>
-                        <div className="mt-2 text-lg font-extrabold">{ops.undecidedConvertedWeek.toLocaleString()}</div>
-                        <div className="text-xs text-slate-500">Undecided → committed</div>
-                      </div>
-
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <div className="text-xs font-semibold text-slate-600">Turnout Intent</div>
-                        <div className="mt-1 text-2xl font-extrabold">{ops.turnoutIntent}%</div>
-
-                        <div className="mt-2 text-xs text-slate-500">Risk level</div>
-                        <div
-                          className={[
-                            "mt-1 inline-flex rounded-full px-3 py-1 text-xs font-semibold",
-                            ops.risk === "Low"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : ops.risk === "Medium"
-                              ? "bg-amber-50 text-amber-700"
-                              : "bg-rose-50 text-rose-700",
-                          ].join(" ")}
-                        >
-                          {ops.risk}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 text-xs text-slate-500">
-                      Demo ops snapshot. Later we’ll map these fields to weekly/monthly logs from Google Sheets.
-                    </div>
+                  <div className="mt-3 text-xs text-slate-500">
+                    Demo sentiment. Later we’ll swap this with Google Sheets values.
                   </div>
-                ) : null}
-
-                <div className="mt-4 text-xs text-slate-500">
-                  This is demo sentiment. When you’re ready, we’ll replace the generators with live values from Google Sheets.
                 </div>
               </>
             ) : (
