@@ -2,15 +2,20 @@ import { parseCsv } from "@/lib/csv";
 
 export async function GET() {
   const url = process.env.KPIS_CSV_URL;
-  if (!url) return Response.json({ error: "Missing KPIS_CSV_URL" }, { status: 500 });
+  if (!url) {
+    return Response.json({ error: "Missing KPIS_CSV_URL" }, { status: 500 });
+  }
 
   const res = await fetch(url, { next: { revalidate: 30 } });
-  if (!res.ok) return Response.json({ error: `Fetch failed: ${res.status}` }, { status: 500 });
+  if (!res.ok) {
+    return Response.json({ error: `Fetch failed: ${res.status}` }, { status: 500 });
+  }
 
   const csv = await res.text();
   const rows = parseCsv(csv);
-
-  if (!rows.length) return Response.json({ error: "No rows in kpis sheet" }, { status: 500 });
+  if (!rows.length) {
+    return Response.json({ error: "No rows in kpis sheet" }, { status: 500 });
+  }
 
   const r = rows[0];
   const num = (v: string) => Number(String(v ?? "").replace(/,/g, "")) || 0;

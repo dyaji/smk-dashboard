@@ -1,13 +1,14 @@
 "use client";
 
-import GroupPerformanceScorecard from "@/components/GroupPerformanceScorecard";
-import ForecastPanel from "@/components/ForecastPanel";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import SupportTrendChart from "@/components/SupportTrendChart";
 import VoterIntentionPie from "@/components/VoterIntentionPie";
 import TopIssuesBar from "@/components/TopIssuesBar";
 import WardSentimentPanel from "@/components/WardSentimentPanel";
+import GroupPerformanceScorecard from "@/components/GroupPerformanceScorecard";
+import ForecastPanel from "@/components/ForecastPanel";
+import PopoutModal from "@/components/PopoutModal";
 
 type LiveKpis = {
   votesCommitted: number;
@@ -24,12 +25,64 @@ type LiveKpis = {
   updatedAt?: string;
 };
 
+type CardId =
+  | "voter"
+  | "polls"
+  | "outreach"
+  | "issues"
+  | "social"
+  | "group"
+  | "forecast"
+  | "ward"
+  | "lga";
+
 function formatNumber(n: number) {
   return new Intl.NumberFormat().format(n);
 }
 
 function formatNGN(n: number) {
   return "₦" + new Intl.NumberFormat().format(n);
+}
+
+function SectionHeader({
+  title,
+  cardId,
+  onExpand,
+}: {
+  title: string;
+  cardId: CardId;
+  onExpand: (id: CardId) => void;
+}) {
+  return (
+    <div
+      className="flex items-center justify-between border-b px-5 py-4"
+      role="button"
+      tabIndex={0}
+      onClick={() => onExpand(cardId)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onExpand(cardId);
+        }
+      }}
+    >
+      <h2 className="text-lg font-bold">{title}</h2>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onExpand(cardId);
+        }}
+        className="text-xs font-semibold text-[#0f3b34] hover:underline"
+      >
+        Expand
+      </button>
+    </div>
+  );
+}
+
+function ModalBlock({ children }: { children: ReactNode }) {
+  return <div className="w-full min-w-0">{children}</div>;
 }
 
 export default function Page() {
@@ -53,6 +106,7 @@ export default function Page() {
 
   const [liveKpis, setLiveKpis] = useState<LiveKpis | null>(null);
   const [kpisError, setKpisError] = useState<string | null>(null);
+  const [openCard, setOpenCard] = useState<CardId | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +129,6 @@ export default function Page() {
     };
   }, []);
 
-  // Always render from this single source of truth
   const k = liveKpis ?? fallback;
 
   const outreach = useMemo(
@@ -109,6 +162,31 @@ export default function Page() {
     ],
     []
   );
+
+  const popTitle = useMemo(() => {
+    switch (openCard) {
+      case "voter":
+        return "Voter Intention (Expanded)";
+      case "polls":
+        return "Polls & Sentiment (Expanded)";
+      case "outreach":
+        return "Campaign Outreach (Expanded)";
+      case "issues":
+        return "Top Issues (Expanded)";
+      case "social":
+        return "Social Media Stats (Expanded)";
+      case "group":
+        return "Group Performance Scorecard (Expanded)";
+      case "forecast":
+        return "Forecast & Confidence (Expanded)";
+      case "ward":
+        return "Ward Sentiment (Expanded)";
+      case "lga":
+        return "LGA Leaderboard (Expanded)";
+      default:
+        return "";
+    }
+  }, [openCard]);
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
@@ -178,13 +256,19 @@ export default function Page() {
 
                 <div className="rounded-2xl border border-white/10 bg-white/10 p-4 text-white shadow-sm">
                   <div className="text-xs font-semibold text-white/80">Funds Raised</div>
-                  <div className="mt-2 text-3xl font-extrabold">{formatNGN(k.fundsRaised)}</div>
-                  <div className="mt-2 text-xs text-white/70">Goal: {formatNGN(k.fundsGoal)}</div>
+                  <div className="mt-2 text-3xl font-extrabold">
+                    {formatNGN(k.fundsRaised)}
+                  </div>
+                  <div className="mt-2 text-xs text-white/70">
+                    Goal: {formatNGN(k.fundsGoal)}
+                  </div>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/10 p-4 text-white shadow-sm">
                   <div className="text-xs font-semibold text-white/80">Events Held</div>
-                  <div className="mt-2 text-3xl font-extrabold">{formatNumber(k.eventsHeld)}</div>
+                  <div className="mt-2 text-3xl font-extrabold">
+                    {formatNumber(k.eventsHeld)}
+                  </div>
                   <div className="mt-2 text-xs text-white/70">
                     Upcoming: {formatNumber(k.eventsUpcoming)}
                   </div>
@@ -192,7 +276,9 @@ export default function Page() {
 
                 <div className="rounded-2xl border border-white/10 bg-white/10 p-4 text-white shadow-sm">
                   <div className="text-xs font-semibold text-white/80">Volunteers</div>
-                  <div className="mt-2 text-3xl font-extrabold">{formatNumber(k.volunteers)}</div>
+                  <div className="mt-2 text-3xl font-extrabold">
+                    {formatNumber(k.volunteers)}
+                  </div>
                   <div className="mt-2 text-xs text-white/70">
                     Target: {formatNumber(k.volunteersTarget)}
                   </div>
@@ -206,9 +292,7 @@ export default function Page() {
         <section className="mt-6 grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-12">
           {/* Voter Intention */}
           <section className="lg:col-span-7 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-lg font-bold">Voter Intention</h2>
-            </div>
+            <SectionHeader title="Voter Intention" cardId="voter" onExpand={setOpenCard} />
             <div className="p-5 min-w-0">
               <div className="h-80 w-full min-w-0">
                 <VoterIntentionPie
@@ -222,9 +306,7 @@ export default function Page() {
 
           {/* Polls & Sentiment */}
           <section className="lg:col-span-5 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-lg font-bold">Polls &amp; Sentiment</h2>
-            </div>
+            <SectionHeader title="Polls & Sentiment" cardId="polls" onExpand={setOpenCard} />
             <div className="p-5 min-w-0">
               <SupportTrendChart />
               <div className="mt-4 flex items-center justify-center gap-6 text-sm">
@@ -240,30 +322,32 @@ export default function Page() {
 
           {/* Campaign Outreach */}
           <section className="lg:col-span-4 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-lg font-bold">Campaign Outreach</h2>
-            </div>
+            <SectionHeader title="Campaign Outreach" cardId="outreach" onExpand={setOpenCard} />
             <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-3">
               <div className="rounded-xl bg-[#0f3b34] px-4 py-3 text-white">
                 <div className="text-[11px] text-white/80">Doors Knocked</div>
-                <div className="mt-1 text-xl font-extrabold">{formatNumber(outreach.doorsKnocked)}</div>
+                <div className="mt-1 text-xl font-extrabold">
+                  {formatNumber(outreach.doorsKnocked)}
+                </div>
               </div>
               <div className="rounded-xl bg-[#0f3b34] px-4 py-3 text-white">
                 <div className="text-[11px] text-white/80">Calls Made</div>
-                <div className="mt-1 text-xl font-extrabold">{formatNumber(outreach.callsMade)}</div>
+                <div className="mt-1 text-xl font-extrabold">
+                  {formatNumber(outreach.callsMade)}
+                </div>
               </div>
               <div className="rounded-xl bg-[#0f3b34] px-4 py-3 text-white">
                 <div className="text-[11px] text-white/80">Town Halls</div>
-                <div className="mt-1 text-xl font-extrabold">{formatNumber(outreach.townHalls)}</div>
+                <div className="mt-1 text-xl font-extrabold">
+                  {formatNumber(outreach.townHalls)}
+                </div>
               </div>
             </div>
           </section>
 
           {/* Top Issues */}
           <section className="lg:col-span-4 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-lg font-bold">Top Issues</h2>
-            </div>
+            <SectionHeader title="Top Issues" cardId="issues" onExpand={setOpenCard} />
             <div className="p-5 min-w-0">
               <TopIssuesBar />
             </div>
@@ -271,13 +355,13 @@ export default function Page() {
 
           {/* Social Media Stats */}
           <section className="lg:col-span-4 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-lg font-bold">Social Media Stats</h2>
-            </div>
+            <SectionHeader title="Social Media Stats" cardId="social" onExpand={setOpenCard} />
             <div className="grid grid-cols-2 gap-3 p-5">
               <div className="rounded-xl bg-slate-800 px-4 py-3 text-white">
                 <div className="text-[11px] text-white/70">Followers</div>
-                <div className="mt-1 text-xl font-extrabold">{formatNumber(social.followers)}</div>
+                <div className="mt-1 text-xl font-extrabold">
+                  {formatNumber(social.followers)}
+                </div>
               </div>
               <div className="rounded-xl bg-slate-800 px-4 py-3 text-white">
                 <div className="text-[11px] text-white/70">Engagements</div>
@@ -288,39 +372,46 @@ export default function Page() {
               </div>
               <div className="rounded-xl bg-slate-800 px-4 py-3 text-white">
                 <div className="text-[11px] text-white/70">Shares</div>
-                <div className="mt-1 text-xl font-extrabold">{formatNumber(social.shares)}</div>
+                <div className="mt-1 text-xl font-extrabold">
+                  {formatNumber(social.shares)}
+                </div>
               </div>
               <div className="rounded-xl bg-slate-800 px-4 py-3 text-white">
                 <div className="text-[11px] text-white/70">Mentions</div>
-                <div className="mt-1 text-xl font-extrabold">{formatNumber(social.mentions)}</div>
+                <div className="mt-1 text-xl font-extrabold">
+                  {formatNumber(social.mentions)}
+                </div>
               </div>
             </div>
           </section>
-               {/* Group Performance Scorecard */}
-                <section className="lg:col-span-8 rounded-2xl border bg-white shadow-sm">
-                 <div className="border-b px-5 py-4">
-                    <h2 className="text-lg font-bold">Group Performance Scorecard</h2>
-                  </div>
-                  <div className="p-5">
-                      <GroupPerformanceScorecard />
-                  </div>
-                </section>
 
-            {/* Forecast */}
-            <section className="lg:col-span-4 rounded-2xl border bg-white shadow-sm">
-               <div className="border-b px-5 py-4">
-                   <h2 className="text-lg font-bold">Forecast &amp; Confidence</h2>
-                </div>
-                 <div className="p-5">
-                   <ForecastPanel />
-               </div>
-            </section>
-   
-          {/* Ward Sentiment (FULL WIDTH like LGA leaderboard) */}
-          <section className="lg:col-span-12 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-lg font-bold">Ward Sentiment</h2>
+          {/* Group Performance Scorecard */}
+          <section className="lg:col-span-8 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <SectionHeader
+              title="Group Performance Scorecard"
+              cardId="group"
+              onExpand={setOpenCard}
+            />
+            <div className="p-5 min-w-0">
+              <GroupPerformanceScorecard />
             </div>
+          </section>
+
+          {/* Forecast */}
+          <section className="lg:col-span-4 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <SectionHeader
+              title="Forecast & Confidence"
+              cardId="forecast"
+              onExpand={setOpenCard}
+            />
+            <div className="p-5 min-w-0">
+              <ForecastPanel />
+            </div>
+          </section>
+
+          {/* Ward Sentiment */}
+          <section className="lg:col-span-12 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <SectionHeader title="Ward Sentiment" cardId="ward" onExpand={setOpenCard} />
             <div className="p-5 min-w-0">
               <WardSentimentPanel />
             </div>
@@ -328,9 +419,7 @@ export default function Page() {
 
           {/* LGA Leaderboard */}
           <section className="lg:col-span-12 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-lg font-bold">LGA Leaderboard</h2>
-            </div>
+            <SectionHeader title="LGA Leaderboard" cardId="lga" onExpand={setOpenCard} />
             <div className="overflow-x-auto p-5">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="text-left text-slate-600">
@@ -372,6 +461,165 @@ export default function Page() {
           </section>
         </section>
       </div>
+
+      <PopoutModal
+        open={openCard !== null}
+        title={popTitle}
+        onClose={() => setOpenCard(null)}
+      >
+        {openCard === "voter" ? (
+          <ModalBlock>
+            <div className="h-[520px] min-h-[520px] w-full min-w-0">
+              <VoterIntentionPie
+                committed={k.committedPct}
+                undecided={k.undecidedPct}
+                opposition={k.oppositionPct}
+              />
+            </div>
+          </ModalBlock>
+        ) : null}
+
+        {openCard === "polls" ? (
+          <ModalBlock>
+            <div className="h-[520px] min-h-[520px] w-full min-w-0">
+              <SupportTrendChart />
+            </div>
+            <div className="mt-4 flex items-center justify-center gap-6 text-sm">
+              <div className="font-semibold text-emerald-700">
+                72% <span className="font-normal text-slate-700">Favorable</span>
+              </div>
+              <div className="font-semibold text-red-600">
+                24% <span className="font-normal text-slate-700">Unfavorable</span>
+              </div>
+            </div>
+          </ModalBlock>
+        ) : null}
+
+        {openCard === "outreach" ? (
+          <ModalBlock>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl bg-[#0f3b34] p-5 text-white">
+                <div className="text-xs font-semibold text-white/80">Doors Knocked</div>
+                <div className="mt-2 text-3xl font-extrabold">
+                  {formatNumber(outreach.doorsKnocked)}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-[#0f3b34] p-5 text-white">
+                <div className="text-xs font-semibold text-white/80">Calls Made</div>
+                <div className="mt-2 text-3xl font-extrabold">
+                  {formatNumber(outreach.callsMade)}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-[#0f3b34] p-5 text-white">
+                <div className="text-xs font-semibold text-white/80">Town Halls</div>
+                <div className="mt-2 text-3xl font-extrabold">
+                  {formatNumber(outreach.townHalls)}
+                </div>
+              </div>
+            </div>
+          </ModalBlock>
+        ) : null}
+
+        {openCard === "issues" ? (
+          <ModalBlock>
+            <div className="h-[520px] min-h-[520px] w-full min-w-0">
+              <TopIssuesBar />
+            </div>
+          </ModalBlock>
+        ) : null}
+
+        {openCard === "social" ? (
+          <ModalBlock>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl bg-slate-900 p-5 text-white">
+                <div className="text-xs font-semibold text-white/70">Followers</div>
+                <div className="mt-2 text-3xl font-extrabold">
+                  {formatNumber(social.followers)}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-slate-900 p-5 text-white">
+                <div className="text-xs font-semibold text-white/70">Engagements</div>
+                <div className="mt-2 text-3xl font-extrabold">
+                  {formatNumber(social.engagementsThisWeek)}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-slate-900 p-5 text-white">
+                <div className="text-xs font-semibold text-white/70">Shares</div>
+                <div className="mt-2 text-3xl font-extrabold">
+                  {formatNumber(social.shares)}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-slate-900 p-5 text-white">
+                <div className="text-xs font-semibold text-white/70">Mentions</div>
+                <div className="mt-2 text-3xl font-extrabold">
+                  {formatNumber(social.mentions)}
+                </div>
+              </div>
+            </div>
+          </ModalBlock>
+        ) : null}
+
+        {openCard === "group" ? (
+          <ModalBlock>
+            <GroupPerformanceScorecard />
+          </ModalBlock>
+        ) : null}
+
+        {openCard === "forecast" ? (
+          <ModalBlock>
+            <ForecastPanel />
+          </ModalBlock>
+        ) : null}
+
+        {openCard === "ward" ? (
+          <ModalBlock>
+            <WardSentimentPanel />
+          </ModalBlock>
+        ) : null}
+
+        {openCard === "lga" ? (
+          <ModalBlock>
+            <div className="w-full min-w-0 overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead className="text-left text-slate-600">
+                  <tr>
+                    <th className="py-2 pr-4">LGA</th>
+                    <th className="py-2 pr-4">Momentum Score</th>
+                    <th className="py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lgaLeaderboard.map((row) => {
+                    const status =
+                      row.score >= 85 ? "Strong" : row.score >= 75 ? "Growing" : "Needs push";
+                    return (
+                      <tr key={row.lga} className="border-t">
+                        <td className="py-3 pr-4 font-semibold">{row.lga}</td>
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-2 w-64 rounded-full bg-slate-200">
+                              <div
+                                className="h-2 rounded-full bg-emerald-700"
+                                style={{ width: `${Math.min(100, Math.max(0, row.score))}%` }}
+                              />
+                            </div>
+                            <span className="w-10 text-right font-semibold">{row.score}</span>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                            {status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </ModalBlock>
+        ) : null}
+      </PopoutModal>
     </main>
   );
 }

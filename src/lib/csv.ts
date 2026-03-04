@@ -23,7 +23,6 @@ function splitCsvLine(line: string): string[] {
     const ch = line[i];
 
     if (ch === '"') {
-      // handle escaped quotes ""
       if (inQ && line[i + 1] === '"') {
         cur += '"';
         i++;
