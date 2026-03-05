@@ -55,7 +55,7 @@ function SectionHeader({
 }) {
   return (
     <div
-      className="flex items-center justify-between border-b px-5 py-4"
+      className="flex cursor-pointer select-none items-center justify-between border-b px-5 py-4"
       role="button"
       tabIndex={0}
       onClick={() => onExpand(cardId)}
@@ -74,6 +74,7 @@ function SectionHeader({
           onExpand(cardId);
         }}
         className="text-xs font-semibold text-[#0f3b34] hover:underline"
+        aria-label={`Expand ${title}`}
       >
         Expand
       </button>
@@ -124,6 +125,7 @@ export default function Page() {
     }
 
     load();
+
     return () => {
       cancelled = true;
     };
@@ -433,6 +435,7 @@ export default function Page() {
                   {lgaLeaderboard.map((row) => {
                     const status =
                       row.score >= 85 ? "Strong" : row.score >= 75 ? "Growing" : "Needs push";
+
                     return (
                       <tr key={row.lga} className="border-t">
                         <td className="py-3 pr-4 font-semibold">{row.lga}</td>
@@ -592,6 +595,7 @@ export default function Page() {
                   {lgaLeaderboard.map((row) => {
                     const status =
                       row.score >= 85 ? "Strong" : row.score >= 75 ? "Growing" : "Needs push";
+
                     return (
                       <tr key={row.lga} className="border-t">
                         <td className="py-3 pr-4 font-semibold">{row.lga}</td>

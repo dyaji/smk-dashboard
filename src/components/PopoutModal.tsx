@@ -21,7 +21,6 @@ export default function PopoutModal({
     };
 
     document.addEventListener("keydown", onKeyDown);
-
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -36,7 +35,6 @@ export default function PopoutModal({
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
-
       <div className="relative mx-auto my-6 w-[min(1100px,92vw)]">
         <div className="overflow-hidden rounded-2xl border bg-white shadow-xl">
           <div className="flex items-center justify-between border-b px-5 py-4">
@@ -49,7 +47,6 @@ export default function PopoutModal({
               Close
             </button>
           </div>
-
           <div className="max-h-[80vh] overflow-auto p-5">{children}</div>
         </div>
       </div>
